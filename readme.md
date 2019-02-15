@@ -1,1 +1,1 @@
-experimenting with go to get more familiar with it.
+simple scripts I wrote during my journey of learning go.
