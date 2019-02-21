@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
 	"time"
@@ -38,7 +39,7 @@ type GameElement struct {
 }
 
 type Context struct {
-	gameEl    GameElement
+	gameEl    []GameElement
 	world     World
 	counter   int
 	time      int
@@ -76,8 +77,10 @@ func (ctx *Context) Draw() {
 		bottom = midY + (world.height / 2) + 1
 	)
 	ctx.world.Draw(top, bottom, left)
-	ctx.gameEl.Draw(left, bottom)
-	tbprint(left, bottom, DefaultColor, DefaultColor, strconv.Itoa(ctx.counter))
+	ctx.gameEl[len(ctx.gameEl)-1].Draw(left, bottom)
+
+	counter := fmt.Sprintf("%d%s%d", ctx.counter, "/", len(ctx.gameEl))
+	tbprint(left, bottom, DefaultColor, DefaultColor, counter)
 	tbprint(right, bottom, DefaultColor, DefaultColor, strconv.Itoa(ctx.time))
 	termbox.Flush()
 }
@@ -111,12 +114,12 @@ func update(ctx *Context, events chan termbox.Event) {
 	case ev := <-events:
 		if ev.Type == termbox.EventKey {
 			switch {
-			case ev.Ch == ctx.gameEl.letter:
+			case ev.Ch == ctx.gameEl[len(ctx.gameEl)-1].letter:
 				ctx.addgameEl()
 				ctx.counter++
 			case ev.Key == termbox.KeyEsc:
 				ctx.gameState = Quit
-			case ev.Ch != ctx.gameEl.letter:
+			case ev.Ch != ctx.gameEl[len(ctx.gameEl)-1].letter:
 				ctx.addgameEl()
 				ctx.counter--
 			}
@@ -151,6 +154,8 @@ func drawMenu(ctx *Context, events chan termbox.Event) {
 				ctx.gameState = Quit
 			default:
 				ctx.gameState = Playing
+				ctx.counter = 0
+				ctx.gameEl = nil
 				ctx.startTimer()
 				ctx.addgameEl()
 			}
@@ -164,6 +169,11 @@ func drawMenu(ctx *Context, events chan termbox.Event) {
 			bottom = midY + (world.height / 2) + 1
 		)
 		termbox.Clear(DefaultColor, DefaultColor)
+		if len(ctx.gameEl) > 0 {
+			finalScoreText := fmt.Sprintf("%s%d%s%d%s", "You've got ", ctx.counter, " of ", len(ctx.gameEl), " correct")
+			tbprint(left+7, midY-3, DefaultColor, DefaultColor, "Game over!")
+			tbprint(left, midY, DefaultColor, DefaultColor, finalScoreText)
+		}
 		tbprint(left, bottom, DefaultColor, DefaultColor, "Press any button to start")
 		termbox.Flush()
 		time.Sleep(Refresh)
@@ -171,7 +181,7 @@ func drawMenu(ctx *Context, events chan termbox.Event) {
 }
 
 func (ctx *Context) addgameEl() {
-	ctx.gameEl = NewGameElement(rand.Intn(ctx.world.width-1), rand.Intn(ctx.world.height-1), randStringRunes())
+	ctx.gameEl = append(ctx.gameEl, NewGameElement(rand.Intn(ctx.world.width-1), rand.Intn(ctx.world.height-1), randStringRunes()))
 }
 
 func randStringRunes() rune {
